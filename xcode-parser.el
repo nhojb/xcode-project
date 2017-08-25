@@ -262,24 +262,13 @@ Returns the updated object, which you should save, e.g.:
           (signal 'xcode-parser-dict-format (list "=" (xcode-parser-peek))))
         (setq value (xcode-parser-read))
         (setq elements (xcode-parser-add-to-dict elements key value))
-
-        ;; for performance reasons we do two termination checks, first without
-        ;; skipping whitespace, then with.
-        (cond ((eq (char-after) ?\;)
-               (xcode-parser-advance))
-              ((progn (xcode-parser-skip-whitespace-or-comment)
-                      (eq (char-after) ?\;))
-               (xcode-parser-advance))
-              (t (signal 'xcode-parser-dict-format (list ";" (xcode-parser-peek)))))
-
-        ;; now check for closing }
-        (cond ((eq (char-after) ?})
-               (setq more nil))
-              ((progn
-                 (xcode-parser-skip-whitespace-or-comment)
-                 (eq (char-after) ?}))
-               (setq more nil)))))
-
+        (xcode-parser-skip-whitespace-or-comment)
+        (if (eq (char-after) ?\;)
+            (xcode-parser-advance)
+          (signal 'xcode-parser-dict-format (list ";" (xcode-parser-peek))))
+        (xcode-parser-skip-whitespace-or-comment)
+        (if (eq (char-after) ?})
+            (setq more nil))))
     ;; Skip over the "}"
     (xcode-parser-advance)
     elements))
@@ -301,15 +290,14 @@ Returns the updated object, which you should save, e.g.:
         ;; trailing quotes are permitted even at the end of the array.
         ;; so we test for both symbols each time.
         (let (term)
-          ;; TODO: optimise this with early check?
           (xcode-parser-skip-whitespace-or-comment)
-          (cond ((eq (char-after) ?,)
-                 (xcode-parser-advance)
-                 (setq term t)))
+          (if (eq (char-after) ?,)
+              (progn (xcode-parser-advance)
+                     (setq term t)))
           (xcode-parser-skip-whitespace-or-comment)
-          (cond ((eq (char-after) ?\))
-                 (setq more nil)
-                 (setq term t)))
+          (if (eq (char-after) ?\))
+              (progn (setq more nil)
+                     (setq term t)))
           (unless term
             (signal 'xcode-parser-array-format (list (point)))))))
     ;; Skip over the ")"
