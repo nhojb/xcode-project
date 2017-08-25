@@ -1,0 +1,12 @@
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+            FOO = BAR;
+    };
+	rootObject = 52EB57821F3E0E73008E3850 /* Project object */;
+    number = 56.6;
+    nonNumber = 52EB57821F3E0E73008E3850;
+}
