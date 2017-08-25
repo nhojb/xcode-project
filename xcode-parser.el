@@ -89,13 +89,13 @@ your call to `xcode-parser-read' instead of `setq'ing it.")
 (defun xcode-parser-skip-comment ()
   "Skip over the PLIST comment at point."
   (if (eq (char-after) ?/)
-      (cond ((looking-at "//.*")
-             (goto-char (match-end 0)))
-            ((looking-at "/\\*")
+      (cond ((looking-at "/\\*")
              ;; '.' match must be non-greedy to avoid taking in further comments.
              (if (looking-at "/\\*.*?\\(\n.*?\\)*\\*/")
                  (goto-char (match-end 0))
-               (signal 'xcode-parser-comment-format (list (point))))))))
+               (signal 'xcode-parser-comment-format (list (point)))))
+            ((looking-at "//.*")
+             (goto-char (match-end 0))))))
 
 ;; Error conditions
 
@@ -139,9 +139,9 @@ your call to `xcode-parser-read' instead of `setq'ing it.")
 
 N.B.: Only numbers which can fit in Emacs Lisp's native number
 representation will be parsed correctly."
- ;; This regexp requires one character of backtrack in the common case
- ;; of a whole number, but is slightly faster than a more explicit
- ;; regexp like "\\([0-9]+\\)?\\(\\.[0-9]+\\)?"
+ ;; It is important that this regex only permit a single decimal point
+ ;; in the result. This is because input with > 1 decimal point must be
+ ;; treated as an unquoted string.
  (if (and (looking-at "[-+]?[0-9]*[.0-9]\\{1\\}[0-9]*\\([Ee][+-]?[0-9]+\\)?\\b")
           ;; a second decimal point is not permitted - should be an unquoted string.
           (not (eq (char-after (match-end 0)) ?.)))
@@ -227,7 +227,7 @@ representation will be parsed correctly."
   (let (result
         (start (point)))
     ;; Read up to white space or any non-permitted char: (){},=;"'\
-	(if (> (skip-chars-forward "^ \t\n\"'\\\\{}(),=;") 0)
+	(if (> (skip-chars-forward "^ ;,=\n\t\"'{}()\\\\") 0)
         (setq result (buffer-substring-no-properties start (point))))
     (unless result
       (error "Unquoted string has no value!"))
