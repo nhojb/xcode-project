@@ -106,10 +106,6 @@ your call to `xcode-parser-read' instead of `setq'ing it.")
 (put 'xcode-parser-readtable-error 'error-conditions
      '(xcode-parser-readtable-error xcode-parser-error error))
 
-(put 'xcode-parser-unknown-keyword 'error-message "Unrecognized keyword")
-(put 'xcode-parser-unknown-keyword 'error-conditions
-     '(xcode-parser-unknown-keyword xcode-parser-error error))
-
 (put 'xcode-parser-comment-format 'error-message "Invalid comment format")
 (put 'xcode-parser-comment-format 'error-conditions
      '(xcode-parser-comment-format xcode-parser-error error))
