@@ -47,7 +47,7 @@
 
 ;;; Code:
 
-(require 'json)
+(require 'xcode-parser)
 (require 'subr-x)
 
 ;; Parameters
@@ -62,10 +62,7 @@ Returns the parsed Xcode project as a json object, or nil on error."
                         (concat (file-name-as-directory xcodeproj-path) "project.pbxproj")))
         (plutil-path (executable-find "plutil")))
     (if (and (file-exists-p pbxproj-path) plutil-path)
-        (when-let (output (shell-command-to-string (format "%s -convert json '%s' -o -" plutil-path (expand-file-name pbxproj-path))))
-          ;; ensure we read alist type
-          ;;(json-object-type 'alist))
-          (json-read-from-string output)))))
+        (xcode-parser-read-file (expand-file-name pbxproj-path)))))
 
 (defun xcode-project-find-xcodeproj (directory-or-file)
   "Search DIRECTORY-OR-FILE and parent directories for an Xcode project file.
