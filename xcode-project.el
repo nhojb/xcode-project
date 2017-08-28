@@ -47,5 +47,39 @@
 
 ;;; Code:
 
+(require 'json)
+(require 'subr-x)
+
+;; Parameters
+
+;; Public
+
+(defun xcode-project-read (xcodeproj-path)
+  "Read the Xcode project at XCODEPROJ-PATH.
+Returns the parsed Xcode project as a json object, or nil on error."
+  (let ((pbxproj-path (if (equal (file-name-nondirectory xcodeproj-path) "project.pbxproj")
+                          xcodeproj-path
+                        (concat (file-name-as-directory xcodeproj-path) "project.pbxproj")))
+        (plutil-path (executable-find "plutil")))
+    (if (and (file-exists-p pbxproj-path) plutil-path)
+        (when-let (output (shell-command-to-string (format "%s -convert json '%s' -o -" plutil-path (expand-file-name pbxproj-path))))
+          ;; ensure we read alist type
+          ;;(json-object-type 'alist))
+          (json-read-from-string output)))))
+
+(defun xcode-project-find-xcodeproj (directory-or-file)
+  "Search DIRECTORY-OR-FILE and parent directories for an Xcode project file.
+Returns the path to the Xcode project, or nil if not found."
+  (if directory-or-file
+      (let (xcodeproj
+            (directory (if (file-directory-p directory-or-file)
+                           directory-or-file
+                         (file-name-directory directory-or-file))))
+        (setq directory (expand-file-name directory))
+        (while (and (eq xcodeproj nil) (not (equal directory "/")))
+          (setq xcodeproj (directory-files directory t ".*\.xcodeproj$"))
+          (setq directory (file-name-directory (directory-file-name directory))))
+        (car xcodeproj))))
+
 (provide 'xcode-project)
 ;;; xcode-project.el ends here
