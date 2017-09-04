@@ -212,65 +212,6 @@ Optionally filter by phase ISA type."
                                phase)))
                          (alist-get 'buildPhases target))))
 
-;; (defun xcode-project-build-phase-file-references (project build-phase)
-;;   "Return a list of PBXFileReference objects in PROJECT for BUILD-PHASE (alist)."
-;;   (when-let ((groups (xcode-project-groups project t)))
-;;     ;; PBXBuildFile -> PBXFileReference
-;;     (seq-map (lambda (ref)
-;;                (let* ((build-file (xcode-project--object-ref project ref))
-;;                       ;; get PBXFileReference with object ref
-;;                       (file-ref (copy-alist (xcode-project--object-ref (alist-get 'fileRef build-file) t)))
-;;                       (path (xcode-project--resolve-path groups file-ref)))
-;;                  (if path
-;;                      (setcdr (last file-ref) `(path . ,path)))
-;;                  ;; drop ref
-;;                  (cdr file-ref)))
-;;              (alist-get 'files build-phase))))
-
-;; (defun xcode-project--resolve-path (groups file-or-group)
-;;   "Return a path for FILE-OR-GROUP, relative to the project's root directory."
-;;   (let* ((path (alist-get 'path file-or-group))
-;;          (parent-ref (alist-get 'xcode-parent-ref file-or-group))
-;;          (parent (if parent-ref
-;;                      (assq parent-ref groups)
-;;                    (xcode-project--parent-group groups (car file-or-group)))))
-;;     (if (equal (alist-get 'isa file-or-group) "PBXGroup")
-;;         (setq path (if path (file-name-as-directory path) "")))
-;;     (when parent
-;;       ;; recurse up to build the full path:
-;;       (let ((parent-path (xcode-project--resolve-path groups parent)))
-;;         (if parent-path
-;;             (setq path (concat parent-path path)))))
-;;     path))
-
-;; Groups
-
-;; (defun xcode-project-groups (project &optional keep-ref)
-;;   "Return a list of all PBXGroup objects found in PROJECT.
-;; An additional `parent-group' key is inserted into each group alist
-;; to make it easier to traverse the group hierarchy.
-
-;; Optionally set KEEP-REF t to keep the group reference in the car of
-;; each group object."
-;;   (when-let ((groups (xcode-project--objects-isa project "PBXGroup" t)))
-;;     (seq-map (lambda (group-with-ref)
-;;                (let ((group (copy-alist (if keep-ref group-with-ref (cdr group-with-ref)))))
-;;                  (when-let (parent (xcode-project--parent-group groups (car group-with-ref)))
-;;                    (setcdr (last group) `((xcode-parent-ref . ,(car parent)))))
-;;                  group))
-;;              groups)))
-
-;; (defun xcode-project--parent-group (groups ref)
-;;   "Return the parent group from GROUPS for the file or group REF."
-;;   (unless ref
-;;     (error "Non-nil object ref!"))
-;;   (if (symbolp ref)
-;;       (setq ref (symbol-name ref)))
-;;   (seq-some (lambda (group-with-ref)
-;;               (if (seq-contains (alist-get 'children group-with-ref) ref)
-;;                   group-with-ref))
-;;             groups))
-
 ;; Groups
 
 (defun xcode-project-groups (project &optional keep-ref)
