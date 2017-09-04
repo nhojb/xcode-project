@@ -44,6 +44,18 @@
 
 ;; Private
 
+(defun xcode-project--keep (fn seq)
+  "Return a new list of the non-nil results of applying FN to the items in SEQ.
+Differ from dash -keep in that the input seq can be any sequence type."
+  (if (not (listp seq))
+      (setq seq (seq-into seq 'list)))
+  (let (results)
+    (dolist (elt seq results)
+      (when-let (keep (funcall fn elt))
+        (if results
+            (setcdr (last results) (list keep))
+          (setq results (list keep)))))))
+
 (defun xcode-project--objects (project)
   "Return all objects for the specified PROJECT.
 Private function."
@@ -57,25 +69,25 @@ usually contained in the value alist), but if you want it included
 specify KEEP-REF t.
 
 Private function."
-  (let (results)
-    (dolist (obj (xcode-project--objects project) results)
-      (if (equal (alist-get 'isa obj) isa)
-          (let ((result (if keep-ref obj
-                          ;; drop the reference from the result
-                          (cdr obj))))
-            (if results
-                (setcdr (last results) (list result))
-              (setq results (list result))))))))
+  (xcode-project--keep (lambda (obj)
+                         (if (equal (alist-get 'isa obj) isa)
+                             (if keep-ref obj
+                               ;; drop the reference from the result
+                               (cdr obj))))
+                       (xcode-project--objects project)))
 
-(defun xcode-project--object-ref (project ref)
+(defun xcode-project--object-ref (project ref &optional keep-ref)
   "Return the object in PROJECT matching REF.
+If KEEP-REF t sets ref as the car of the returned object.
 Private function."
   (if (stringp ref)
       (setq ref (intern-soft ref)))
   (unless (symbolp ref)
     (error "Object ref must be a symbol"))
-  (seq-some (lambda (obj) (if (eq (car obj) ref) obj))
-            (xcode-project--objects project)))
+  (when-let ((obj (alist-get ref (xcode-project--objects project))))
+    (if keep-ref
+        (push ref obj)
+      obj)))
 
 ;; Public
 
@@ -87,7 +99,10 @@ Returns the parsed Xcode project as a json object, or nil on error."
                         (concat (file-name-as-directory xcodeproj-path) "project.pbxproj")))
         (plutil-path (executable-find "plutil")))
     (if (and (file-exists-p pbxproj-path) plutil-path)
-        (xcode-parser-read-file (expand-file-name pbxproj-path)))))
+        (when-let ((proj (xcode-parser-read-file (expand-file-name pbxproj-path))))
+          ;; append path - used when building file-paths
+          (setcdr (last proj) `((xcode-project-path . ,xcodeproj-path)))
+          proj))))
 
 (defun xcode-project-find-xcodeproj (directory-or-file)
   "Search DIRECTORY-OR-FILE and parent directories for an Xcode project file.
@@ -98,8 +113,8 @@ Returns the path to the Xcode project, or nil if not found."
                            directory-or-file
                          (file-name-directory directory-or-file))))
         (setq directory (expand-file-name directory))
-        (while (and (eq xcodeproj nil) (not (equal directory "/")))
-          (setq xcodeproj (directory-files directory t ".*\.xcodeproj$"))
+        (while (and (not xcodeproj) (not (equal directory "/")))
+          (setq xcodeproj (directory-files directory t ".*\.xcodeproj$" nil))
           (setq directory (file-name-directory (directory-file-name directory))))
         (car xcodeproj))))
 
@@ -148,17 +163,11 @@ Optionally filter by configuration NAME.
 Private function."
   (let* ((pbxproj (car (xcode-project--objects-isa project "PBXProject")))
          (config-list (xcode-project--object-ref project (alist-get 'buildConfigurationList pbxproj))))
-    (if name
-        (seq-some (lambda (ref)
-                    (let ((config (xcode-project--object-ref project ref)))
-                      (if (equal (alist-get 'name config) name)
-                          ;; remove config ref (car)
-                          (cdr config))))
-                  (alist-get 'buildConfigurations config-list))
-      (seq-map (lambda (ref)
-                 ;; remove config ref (car)
-                 (cdr (xcode-project--object-ref project ref)))
-               (alist-get 'buildConfigurations config-list)))))
+    (xcode-project--keep (lambda (ref)
+                           (let ((config (xcode-project--object-ref project ref)))
+                             (if (or (not name) (equal (alist-get 'name config) name))
+                                 config)))
+                         (alist-get 'buildConfigurations config-list))))
 
 (defun xcode-project-build-config (project name target-name)
   "Return the build configuration in PROJECT matching NAME for TARGET-NAME."
@@ -170,7 +179,7 @@ Private function."
                                         ;; copy to avoid mutating the original
                                         (copy-alist config))))
                     (alist-get 'buildConfigurations build-config-list)))
-         (root-settings (alist-get 'buildSettings (xcode-project--root-build-configs project name))))
+         (root-settings (alist-get 'buildSettings (car (xcode-project--root-build-configs project name)))))
     (when target-build-config
         ;; merge root build settings
         (setf (alist-get 'buildSettings target-build-config)
@@ -191,11 +200,170 @@ Optionally filtered by NAME."
   "Return build settings for the build CONFIG."
   (alist-get 'buildSettings config))
 
-;; Files
-
-
 ;; Build Phases
 
+(defun xcode-project-build-phases (project target-name &optional isa)
+  "Return build phases in PROJECT for TARGET-NAME.
+Optionally filter by phase ISA type."
+  (let ((target (car (xcode-project-targets project 'name target-name))))
+    (xcode-project--keep (lambda (ref)
+                           (let ((phase (xcode-project--object-ref project ref)))
+                             (when (or (not isa) (equal (alist-get 'isa phase) isa))
+                               phase)))
+                         (alist-get 'buildPhases target))))
+
+;; (defun xcode-project-build-phase-file-references (project build-phase)
+;;   "Return a list of PBXFileReference objects in PROJECT for BUILD-PHASE (alist)."
+;;   (when-let ((groups (xcode-project-groups project t)))
+;;     ;; PBXBuildFile -> PBXFileReference
+;;     (seq-map (lambda (ref)
+;;                (let* ((build-file (xcode-project--object-ref project ref))
+;;                       ;; get PBXFileReference with object ref
+;;                       (file-ref (copy-alist (xcode-project--object-ref (alist-get 'fileRef build-file) t)))
+;;                       (path (xcode-project--resolve-path groups file-ref)))
+;;                  (if path
+;;                      (setcdr (last file-ref) `(path . ,path)))
+;;                  ;; drop ref
+;;                  (cdr file-ref)))
+;;              (alist-get 'files build-phase))))
+
+;; (defun xcode-project--resolve-path (groups file-or-group)
+;;   "Return a path for FILE-OR-GROUP, relative to the project's root directory."
+;;   (let* ((path (alist-get 'path file-or-group))
+;;          (parent-ref (alist-get 'xcode-parent-ref file-or-group))
+;;          (parent (if parent-ref
+;;                      (assq parent-ref groups)
+;;                    (xcode-project--parent-group groups (car file-or-group)))))
+;;     (if (equal (alist-get 'isa file-or-group) "PBXGroup")
+;;         (setq path (if path (file-name-as-directory path) "")))
+;;     (when parent
+;;       ;; recurse up to build the full path:
+;;       (let ((parent-path (xcode-project--resolve-path groups parent)))
+;;         (if parent-path
+;;             (setq path (concat parent-path path)))))
+;;     path))
+
+;; Groups
+
+;; (defun xcode-project-groups (project &optional keep-ref)
+;;   "Return a list of all PBXGroup objects found in PROJECT.
+;; An additional `parent-group' key is inserted into each group alist
+;; to make it easier to traverse the group hierarchy.
+
+;; Optionally set KEEP-REF t to keep the group reference in the car of
+;; each group object."
+;;   (when-let ((groups (xcode-project--objects-isa project "PBXGroup" t)))
+;;     (seq-map (lambda (group-with-ref)
+;;                (let ((group (copy-alist (if keep-ref group-with-ref (cdr group-with-ref)))))
+;;                  (when-let (parent (xcode-project--parent-group groups (car group-with-ref)))
+;;                    (setcdr (last group) `((xcode-parent-ref . ,(car parent)))))
+;;                  group))
+;;              groups)))
+
+;; (defun xcode-project--parent-group (groups ref)
+;;   "Return the parent group from GROUPS for the file or group REF."
+;;   (unless ref
+;;     (error "Non-nil object ref!"))
+;;   (if (symbolp ref)
+;;       (setq ref (symbol-name ref)))
+;;   (seq-some (lambda (group-with-ref)
+;;               (if (seq-contains (alist-get 'children group-with-ref) ref)
+;;                   group-with-ref))
+;;             groups))
+
+;; Groups
+
+(defun xcode-project-groups (project &optional keep-ref)
+  "Return a list of all PBXGroup objects found in PROJECT.
+Optionally set KEEP-REF t to keep the group reference in the car of
+each group object."
+  (when-let ((groups (xcode-project--objects-isa project "PBXGroup" keep-ref)))
+    (setq groups (append (xcode-project--objects-isa project "PBXVariantGroup" keep-ref) groups))
+    groups))
+
+(defun xcode-project--group-children (project group parent-path &optional pred)
+  "Return a list of children found in PROJECT for GROUP.
+PARENT-PATH is the fully qualified path to the group (relative to the project).
+Optionally filter files via the predicate PRED (FILE)."
+  (let (results)
+    (seq-do (lambda (ref)
+              (let* ((child (copy-alist (xcode-project--object-ref project ref t)))
+                     (child-path (alist-get 'path child))
+                     (isa (alist-get 'isa child)))
+                (cond
+                 ((equal isa "PBXGroup")
+                  (setq child-path (if child-path (concat parent-path (file-name-as-directory child-path)) parent-path))
+                  (setq results (append results (xcode-project--group-children project child child-path pred))))
+                 ((equal isa "PBXVariantGroup")
+                  ;; filter the PBXVariantGroup, not its children
+                  (when (or (not pred) (funcall pred child))
+                    (setq child-path (if child-path (concat parent-path (file-name-as-directory child-path)) parent-path))
+                    ;; no need to pass the predicate to PBXVariantGroup children - we filtered via the group itself.
+                    (setq results (append results (xcode-project--group-children project child child-path nil)))))
+                 ((or (not pred) (funcall pred child))
+                  (setf (alist-get 'path child) (concat parent-path child-path))
+                  (setq results (append results (list (cdr child))))))))
+            (alist-get 'children group))
+    results))
+
+;; Files
+
+(defun xcode-project--file-list (project &optional pred)
+  "Return complete list of files, as PBXFileReference objects, for the PROJECT.
+Includes fully qualified paths (relative to the project's root directory).
+Optionally filter files via predicate PRED (FILE).
+
+This method builds the file list recursively, starting at the root group.
+It's much faster to build paths this way, than to start with a leaf node (file)
+and work back up the group hierarchy."
+  (let* ((groups (xcode-project-groups project t))
+         (root-group (seq-some (lambda (grp)
+                                 (let ((name (alist-get 'name grp))
+                                       (path (alist-get 'path grp)))
+                                   (if (and (or (not name) (equal name "CustomTemplate")) (not path))
+                                       grp)))
+                               groups)))
+                              ;;(xcode-project--objects-isa project "PBXGroup"))))
+    (unless root-group
+      (error "Unable to locate the root project group!"))
+    (xcode-project--group-children project root-group "" pred)))
+
+(defun xcode-project-build-files (project target-name &optional phase-isa pred)
+  "Return the files, as PBXFileReference objects, in PROJECT for TARGET-NAME.
+Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
+  ;; Get a "whitelist" of file references for the target's build phases
+  (let ((whitelist (seq-mapcat (lambda (phase)
+                                 ;; PBXBuildFile -> PBXFileReference
+                                 (seq-map (lambda (ref)
+                                            (let ((build-file (xcode-project--object-ref project ref)))
+                                              ;; string -> symbol
+                                              (intern-soft (alist-get 'fileRef build-file))))
+                                          (alist-get 'files phase)))
+                               (xcode-project-build-phases project target-name phase-isa))))
+    ;; use local-pred to avoid capture of "pred" in `xcode-project--file-list'.
+    (let* ((local-pred pred)
+           (combined-pred (if local-pred
+                              (lambda (file-with-ref)
+                                (and (funcall local-pred file-with-ref) (seq-contains whitelist (car file-with-ref))))
+                            (lambda (file-with-ref)
+                              (seq-contains whitelist (car file-with-ref))))))
+      (xcode-project--file-list project combined-pred))))
+
+(defun xcode-project-build-file-paths (project target-name &optional phase-isa pred)
+  "Return file paths, relative to PROJECT, for TARGET-NAME.
+Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
+  (seq-map (lambda (file) (alist-get 'path file))
+           (xcode-project-build-files project target-name phase-isa pred)))
+
+(defun xcode-project-file-name-extension (file-ref)
+  "Return the file name extension for the FILE-REF object."
+  (when-let (path-or-name (or (alist-get 'path file-ref)
+                              (alist-get 'name file-ref)))
+    (file-name-extension path-or-name)))
+
+(defun xcode-project-file-name-extension-p (file-ref ext)
+  "Return t if the FILE-REF's extension is equal to EXT (case-insensitive)."
+  (string-collate-equalp (xcode-project-file-name-extension file-ref) ext nil t))
 
 (provide 'xcode-project)
 ;;; xcode-project.el ends here
