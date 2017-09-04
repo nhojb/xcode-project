@@ -22,20 +22,14 @@
 
 ;;; Commentary:
 
-;; Test cases Xcode Parser
+;; Test cases for xcode-parser
 
 ;;; Code:
 
 (require 'ert)
 (require 'xcode-parser)
-(require 'xcode-project)
 
-(message "Running tests on Emacs %s" emacs-version)
-
-;; (defconst xcode-parser-test-directory
-;;   (let ((filename (if load-in-progress load-file-name (buffer-file-name))))
-;;     (expand-file-name "test/" (locate-dominating-file filename "Cask")))
-;;   "Test suite directory, for resource loading.")
+(message "Running xcode-parser tests on Emacs %s" emacs-version)
 
 ;; Utilities
 
@@ -204,23 +198,6 @@
     (xcode-parser-test-should-error "{foo = bad, commas = 'not valid'}" fun)
     ))
 
-;; Test files
-
-(xcode-parser-measure-time
- (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/simple.plist"))
-
-(xcode-parser-measure-time
- (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/project.pbxproj"))
-
-(xcode-parser-measure-time
- (xcode-parser-read-file "~/Projects/OliveToast/Files/2.0/Files.xcodeproj/project.pbxproj"))
-
-(xcode-parser-measure-time
- (xcode-project-read "~/Projects/nhojb/MetalTest/MetalTest.xcodeproj"))
-
-(xcode-parser-measure-time
- (xcode-project-read "~/Projects/OliveToast/Files/2.0/Files.xcodeproj"))
-
 ;; Comments
 
 (ert-deftest xcode-parser-test-comment ()
@@ -315,6 +292,19 @@
     (goto-char (point-min))
     (should (equal (progn (xcode-parser-skip-whitespace-or-comment) (point)) (point-min)))
 ))
+
+;; Performance
+
+(ert-deftest xcode-parser-test-performance ()
+  (xcode-parser-measure-time
+   (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/simple.plist"))
+
+  (xcode-parser-measure-time
+   (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/project.pbxproj"))
+
+  (xcode-parser-measure-time
+   (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/large.pbxproj"))
+  )
 
 (provide 'xcode-parser-test)
 
