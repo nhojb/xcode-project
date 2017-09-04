@@ -38,8 +38,6 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
-
 ;; Parameters
 
 (defvar xcode-parser-array-type 'vector
