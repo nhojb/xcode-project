@@ -231,18 +231,18 @@ Optionally filter files via the predicate PRED (FILE)."
               (let* ((child (copy-alist (xcode-project--object-ref project ref t)))
                      (child-path (alist-get 'path child))
                      (isa (alist-get 'isa child)))
-                (cond
-                 ((equal isa "PBXGroup")
-                  (setq child-path (if child-path (concat parent-path (file-name-as-directory child-path)) parent-path))
-                  (setq results (append results (xcode-project--group-children project child child-path pred))))
-                 ((equal isa "PBXVariantGroup")
-                  ;; filter the PBXVariantGroup, not its children
-                  (when (or (not pred) (funcall pred child))
+                  (cond
+                   ((equal isa "PBXGroup")
                     (setq child-path (if child-path (concat parent-path (file-name-as-directory child-path)) parent-path))
-                    ;; no need to pass the predicate to PBXVariantGroup children - we filtered via the group itself.
-                    (setq results (append results (xcode-project--group-children project child child-path nil)))))
-                 ((or (not pred) (funcall pred child))
-                  (setf (alist-get 'path child) (concat parent-path child-path))
+                    (setq results (append results (xcode-project--group-children project child child-path pred))))
+                   ((equal isa "PBXVariantGroup")
+                    ;; filter the PBXVariantGroup, not its children
+                    (when (or (not pred) (funcall pred child))
+                      (setq child-path (if child-path (concat parent-path (file-name-as-directory child-path)) parent-path))
+                      ;; no need to pass the predicate to PBXVariantGroup children - we filtered via the group itself.
+                      (setq results (append results (xcode-project--group-children project child child-path nil)))))
+                   ((or (not pred) (funcall pred child))
+                    (setf (alist-get 'path child) (concat parent-path child-path))
                   (setq results (append results (list (cdr child))))))))
             (alist-get 'children group))
     results))
@@ -257,14 +257,12 @@ Optionally filter files via predicate PRED (FILE).
 This method builds the file list recursively, starting at the root group.
 It's much faster to build paths this way, than to start with a leaf node (file)
 and work back up the group hierarchy."
-  (let* ((groups (xcode-project-groups project t))
-         (root-group (seq-some (lambda (grp)
-                                 (let ((name (alist-get 'name grp))
-                                       (path (alist-get 'path grp)))
-                                   (if (and (or (not name) (equal name "CustomTemplate")) (not path))
-                                       grp)))
-                               groups)))
-                              ;;(xcode-project--objects-isa project "PBXGroup"))))
+  (let ((root-group (seq-some (lambda (grp)
+                                (let ((name (alist-get 'name grp))
+                                      (path (alist-get 'path grp)))
+                                  (if (and (or (not name) (equal name "CustomTemplate")) (not path))
+                                      grp)))
+                              (xcode-project-groups project t))))
     (unless root-group
       (error "Unable to locate the root project group!"))
     (xcode-project--group-children project root-group "" pred)))
@@ -273,21 +271,23 @@ and work back up the group hierarchy."
   "Return the files, as PBXFileReference objects, in PROJECT for TARGET-NAME.
 Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
   ;; Get a "whitelist" of file references for the target's build phases
-  (let ((whitelist (seq-mapcat (lambda (phase)
-                                 ;; PBXBuildFile -> PBXFileReference
-                                 (seq-map (lambda (ref)
-                                            (let ((build-file (xcode-project--object-ref project ref)))
-                                              ;; string -> symbol
-                                              (intern-soft (alist-get 'fileRef build-file))))
-                                          (alist-get 'files phase)))
-                               (xcode-project-build-phases project target-name phase-isa))))
+  (let ((whitelist
+         (seq-mapcat (lambda (phase)
+                       ;; PBXBuildFile -> PBXFileReference
+                       (seq-map (lambda (ref)
+                                  (let ((build-file (xcode-project--object-ref project ref)))
+                                    ;; string -> symbol
+                                    ;; we create an alist - which is slightly faster to query than a plain list.
+                                    (cons (intern-soft (alist-get 'fileRef build-file)) t)))
+                                (alist-get 'files phase)))
+                     (xcode-project-build-phases project target-name phase-isa))))
     ;; use local-pred to avoid capture of "pred" in `xcode-project--file-list'.
     (let* ((local-pred pred)
            (combined-pred (if local-pred
                               (lambda (file-with-ref)
-                                (and (funcall local-pred file-with-ref) (seq-contains whitelist (car file-with-ref))))
+                                (and (funcall local-pred file-with-ref) (alist-get (car file-with-ref) whitelist)))
                             (lambda (file-with-ref)
-                              (seq-contains whitelist (car file-with-ref))))))
+                              (alist-get (car file-with-ref) whitelist)))))
       (xcode-project--file-list project combined-pred))))
 
 (defun xcode-project-build-file-paths (project target-name &optional phase-isa pred)
