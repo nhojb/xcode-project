@@ -146,55 +146,6 @@
     (should (equal (car (xcode-project-build-file-paths project "MetalTest")) "MetalTest/AppDelegate.swift"))
     ))
 
-(xcode-parser-measure-time
-;; (let ((proj (xcode-project-read "~/Projects/nhojb/metaltest/MetalTest.xcodeproj")))
-;; (let ((proj (xcode-project-read "~/Projects/Contracts/ColorFinale/ColorFinale.xcodeproj")))
-(let ((proj (xcode-project-read "~/Projects/OliveToast/Files/2.0/Files.xcodeproj")))
-   ;;(message "path: %s" (alist-get 'xcode-project-path proj))
-   ;;(message "targets: %s" (xcode-project--objects-isa proj "PBXNativeTarget"))
-   ;;(message "targets: %s" (xcode-project-targets proj 'productType "com.apple.product-type.application"))
-   ;;(message "configs: %s" (xcode-project--objects-isa proj "XCConfigurationList" t))
-   ;;(message "configs: %s" (xcode-project--root-build-configs proj))
-   ;;(message "configs: %s" (xcode-project--root-build-configs proj "Release"))
-   ;;(message "configs: %s" (xcode-project-build-config-names proj))
-     ;;(message "targets: %s" (xcode-project-target-names proj))
-   ;;(alist-get 'buildSettings (xcode-project-build-config proj "Debug" "MetalTest"))
-   ;;(xcode-project-build-phases proj "MetalTest" "PBXSourcesBuildPhase")
-   ;; (let ((phase (car (xcode-project-build-phases proj "MetalTest" "PBXSourcesBuildPhase"))))
-   ;;   (xcode-project-build-phase-file-references proj phase))
-   ;;(xcode-project-build-files proj "MetalTest")
-
-   ;;(let ((ref (xcode-project--parent-group-ref (xcode-project--objects-isa proj "PBXGroup" t) '52E68B601F45B66B0055BE24)))
-   ;;(message "ref: %s %s" ref (symbolp ref)))
-   ;;(xcode-project-groups proj t)
-
-   ;; (let ((groups (xcode-project-groups proj t))
-   ;;       (file-refs (xcode-project--objects-isa proj "PBXFileReference" t)))
-   ;;   (dolist (fr file-refs)
-   ;;     (if (equal (file-name-extension (alist-get 'path fr)) "m")
-   ;;         (xcode-project--resolve-path groups fr)))
-   ;;   ;;(message "groups: %s" groups)
-   ;;   ;;(message "52EB57811F3E0E73008E3850: %s" (alist-get '52EB57811F3E0E73008E3850 groups))
-   ;;   )
-
-   ;;(message "files: %s" (xcode-project--file-list proj (lambda (file) (equal (file-name-extension (alist-get 'path file)) "swift"))))
-   ;;(length (xcode-project--objects-isa proj "PBXFileReference"))
-   ;;(xcode-project--file-list proj)
-
-   ;; (let ((files (xcode-project--objects-isa proj "PBXFileReference")))
-   ;;   (dolist (file files)
-   ;;     (message "file: %s" (alist-get 'path file))
-   ;;     (unless (alist-get 'path file)
-   ;;       (error "File has no path: %s" file))))
-
-   ;;(message "build-files: %s" (xcode-project-build-file-paths proj "MetalTest")) ; nil (lambda (file) (xcode-project-file-name-extension-p file "swift"))))
-   ;;(message "build-files: %s" (xcode-project-build-file-paths proj "ColorFinale" "PBXSourcesBuildPhase" (lambda (file) (xcode-project-file-name-extension-p file "m"))))
-  ;;(message "build-files: %s" (xcode-project-build-file-paths proj "Files Pro" "PBXSourcesBuildPhase" (lambda (file) (xcode-project-file-name-extension-p file "m"))))
-
-  (xcode-project-build-file-paths proj "Files Pro" "PBXSourcesBuildPhase" (lambda (file) (xcode-project-file-name-extension-p file "m")))
-  )
-)
-
 (provide 'xcode-project-test)
 
 ;;; xcode-project-test.el ends here
