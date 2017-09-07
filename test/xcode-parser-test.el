@@ -54,6 +54,15 @@
     (goto-char (point-min))
     (should-error (funcall fun))))
 
+(defmacro xcode-parser-measure-ntimes (ntimes &rest body)
+  "Measure the average time it takes to evaluate BODY over NTIMES.
+Optionaly perform body NTIMES."
+  `(let ((time (current-time))
+         (n (or ,ntimes 1)))
+     (dotimes (i n)
+       ,@body)
+     (message "%.06f" (/ (float-time (time-since time)) n))))
+
 (defmacro xcode-parser-measure-time (&rest body)
   "Measure the time it takes to evaluate BODY."
   `(let ((time (current-time)))
@@ -296,13 +305,16 @@
 ;; Performance
 
 (ert-deftest xcode-parser-test-performance ()
-  (xcode-parser-measure-time
+  (xcode-parser-measure-ntimes 5
    (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/simple.plist"))
 
-  (xcode-parser-measure-time
+  (xcode-parser-measure-ntimes 5
    (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/project.pbxproj"))
 
-  (xcode-parser-measure-time
+  (xcode-parser-measure-ntimes 5
+   (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/medium.pbxproj"))
+
+  (xcode-parser-measure-ntimes 5
    (xcode-parser-read-file "~/Projects/nhojb/xcode-project/test/large.pbxproj"))
   )
 
