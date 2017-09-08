@@ -71,9 +71,7 @@
 
 (require 'xcode-parser)
 
-;; Parameters
-
-;; Private
+;; Utilities
 
 (defun xcode-project--keep (fn seq)
   "Return a new list of the non-nil results of applying FN to the items in SEQ.
