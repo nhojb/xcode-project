@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nhojb/xcode-project.git
 ;; Version: 1.0
 ;; Keywords: languages, tools
-;; Package-Requires: ((emacs "24.4") (json "1.0"))
+;; Package-Requires: ((emacs "24.4"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -30,11 +30,42 @@
 ;; Features:
 ;;
 ;; - Parse Xcode project file (project.pbxproj)
-;; - Extract information about targets, build configs, build settings and files etc.
+;; - Extract information about targets, build configurations, build settings and files etc.
 ;;
 ;; Usage:
 ;;
-;; (xcode-project-read PATH-TO-XCODEPROJ)
+;; To obtain the parsed project object (alist):
+;;
+;; (`xcode-project-read' PATH-TO-XCODEPROJ)
+;;
+;; Helper to locate the project file for any given source file:
+;; (`xcode-project-find-xcodeproj' PATH-TO-FILE)
+;;
+;; Then extract information such as targets, build phases, configurations and files.
+;; Most functions return an object (alist), unless otherwise described (e.g. `xcode-project-target-names').
+;;
+;; Targets:
+;; (`xcode-project-targets' PROJ)
+;;
+;; (`xcode-project-target-names' PROJ)
+;;
+;; Build Phases:
+;; (`xcode-project-build-phases' PROJ TARGET-NAME)
+;;
+;; Build Configurations:
+;; (`xcode-project-build-config-names' PROJ)
+;;
+;; (`xcode-project-build-config' PROJ CONFIG-NAME TARGET-NAME)
+;;
+;; Build Settings:
+;; (`xcode-build-config-setings' CONFIG)
+;;
+;; Build files - as objects:
+;; (`xcode-project-build-files' PROJ TARGET-NAME)
+;;
+;; - as paths (relative to project)
+;; (`xcode-project-build-file-paths' PROJ TARGET-NAME)
+;;
 
 ;;; Code:
 
