@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nhojb/xcode-project.git
 ;; Version: 1.0
 ;; Keywords: languages, tools
-;; Package-Requires: ((emacs "24.4"))
+;; Package-Requires: ((emacs "25"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -58,7 +58,7 @@
 ;; (`xcode-project-build-config' PROJ CONFIG-NAME TARGET-NAME)
 ;;
 ;; Build Settings:
-;; (`xcode-build-config-setings' CONFIG)
+;; (`xcode-project-build-config-setings' CONFIG)
 ;;
 ;; Build files - as objects:
 ;; (`xcode-project-build-files' PROJ TARGET-NAME)
@@ -168,19 +168,19 @@ Targets are filtered according to the optional KEY VALUE."
   (nreverse (seq-map (lambda (target) (alist-get 'name target))
                      (xcode-project-targets project))))
 
-(defun xcode-target-name (target)
+(defun xcode-project-target-name (target)
   "Return the name of the specified TARGET."
   (alist-get 'name target))
 
-(defun xcode-target-product-name (target)
+(defun xcode-project-target-product-name (target)
   "Return the product name of the specified TARGET."
   (alist-get 'productName target))
 
-(defun xcode-target-type (target)
+(defun xcode-project-target-type (target)
   "Return the type of the specified TARGET."
   (alist-get 'productType target))
 
-(defun xcode-target-ref (target)
+(defun xcode-project-target-ref (target)
   "Return the reference of the specified TARGET."
   (alist-get 'productReference target))
 
@@ -221,11 +221,11 @@ Optionally filtered by NAME."
   (seq-map (lambda (config) (alist-get 'name config))
            (xcode-project--root-build-configs project)))
 
-(defun xcode-build-config-name (config)
+(defun xcode-project-build-config-name (config)
   "Return name for the build CONFIG."
   (alist-get 'name config))
 
-(defun xcode-build-config-setings (config)
+(defun xcode-project-build-config-setings (config)
   "Return build settings for the build CONFIG."
   (alist-get 'buildSettings config))
 

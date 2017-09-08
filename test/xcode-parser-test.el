@@ -197,7 +197,7 @@ Optionaly perform body NTIMES."
     (xcode-parser-test-should-equal "{foo /* inline comment */ = bar;}" '((foo . "bar")) fun)
     (xcode-parser-test-should-equal "{foo /* inline comment */ = bar /* second comment */; }" '((foo . "bar")) fun)
     (xcode-parser-test-should-equal "{foo /* inline comment */ = bar; } // trailing comment" '((foo . "bar")) fun)
-    
+
     ;; Errors
     (xcode-parser-test-should-error "{" fun)
     (xcode-parser-test-should-error "}" fun)

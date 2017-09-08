@@ -28,7 +28,8 @@
 ;; These files use the original OpenStep text file format.
 ;; This parser implements only enough of the Property List format
 ;; to read Xcode files.  Notably this means there is no support
-;; for reading binary (NSData) objects.
+;; for reading binary (NSData) objects or the more recent xml/binary
+;; Property List file formats.
 
 ;; For more information about the OpenStep property list format see:
 ;; <URL:https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/PropertyLists/OldStylePlists/OldStylePLists.html>
@@ -220,10 +221,10 @@ representation will be parsed correctly."
 
 ;;; PLIST Dictionaries
 
-(defun xcode-parser-add-to-dict (object key value)
+(defun xcode-parser-add-to-dict (key value object)
   "Add a new KEY -> VALUE association to OBJECT.
 Returns the updated object, which you should save, e.g.:
-    (setq obj (xcode-parser-add-to-dict obj \"foo\" \"bar\"))"
+    (setq obj (xcode-parser-add-to-dict \"foo\" \"bar\" obj))"
   (cons (cons (intern key) value) object))
 
 ;; PLIST dict parsing
@@ -246,7 +247,7 @@ Returns the updated object, which you should save, e.g.:
             (xcode-parser-advance)
           (signal 'xcode-parser-dict-format (list "=" (xcode-parser-peek))))
         (setq value (xcode-parser-read))
-        (setq elements (xcode-parser-add-to-dict elements key value))
+        (setq elements (xcode-parser-add-to-dict key value elements))
         (xcode-parser-skip-whitespace-or-comment)
         (if (eq (char-after) ?\;)
             (xcode-parser-advance)
@@ -294,7 +295,7 @@ Returns the updated object, which you should save, e.g.:
 
 ;;; PLIST reader.
 
-(defvar my-xcode-parser-readtable
+(defvar xcode-parser-readtable
   (let ((table (make-char-table nil)))
     (aset table ?{ '(xcode-parser-read-dict))
     (aset table ?\( '(xcode-parser-read-array))
@@ -310,7 +311,7 @@ Returns the updated object, which you should save, e.g.:
   "Parse and return the property list object following point."
   (xcode-parser-skip-whitespace-or-comment)
   (if (char-after)
-      (let ((record (aref my-xcode-parser-readtable (char-after))))
+      (let ((record (aref xcode-parser-readtable (char-after))))
         (unless record
           (setq record '(xcode-parser-read-unquoted-string)))
         (if record
