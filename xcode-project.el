@@ -92,6 +92,7 @@ Private function."
 
 (defun xcode-project--objects-isa (project isa &optional keep-ref)
   "Return all objects found in PROJECT of type ISA.
+ISA may be a string or a regex.
 
 By default the object reference is discarded (the reference is
 usually contained in the value alist), but if you want it included
@@ -99,11 +100,27 @@ specify KEEP-REF t.
 
 Private function."
   (xcode-project--keep (lambda (obj)
-                         (if (equal (alist-get 'isa obj) isa)
+                         (if (eq (string-match-p isa (alist-get 'isa obj)) 0)
                              (if keep-ref obj
                                ;; drop the reference from the result
                                (cdr obj))))
                        (xcode-project--objects project)))
+
+(defun xcode-project--objects-keep (project pred &optional isa)
+  "Return a list of non-nil results of applying PRED to all objects in PROJECT.
+Optionally filter by object type ISA.
+
+This method can be faster than using xcode-project--objects-isa, then
+performing additional filtering on the returned list.
+
+Private function."
+  (let ((local-pred (if isa
+                        (lambda (obj)
+                          (when (string-match-p isa (alist-get 'isa obj))
+                            (funcall pred obj)))
+                      pred)))
+    (xcode-project--keep (lambda(obj) (funcall local-pred obj))
+                         (xcode-project--objects project))))
 
 (defun xcode-project--object-ref (project ref &optional keep-ref)
   "Return the object in PROJECT matching REF.
@@ -167,6 +184,41 @@ Targets are filtered according to the optional KEY VALUE."
   "Return a list of target names found for the specified PROJECT object."
   (nreverse (seq-map (lambda (target) (alist-get 'name target))
                      (xcode-project-targets project))))
+
+(defun xcode-project-targets-for-file (project file-name &optional phase-isa)
+  "Return a list of targets in PROJECT which include FILE-NAME.
+FILE-NAME may be a name or a relative path, but must match the
+PBXFileReference path stored in the Xcode project.
+
+Optionally filter via phase type PHASE-ISA if known (e.g. PBXSourcesBuildPhase).
+
+Note: this function currently fails to resolve targets for localized files,
+which are referenced (in the build phase) via their parent PBXVariantGroup."
+  ;; file-name -> PBXFileReference
+  (when-let (file-ref-id (symbol-name (car (car (xcode-project-file-references project file-name t)))))
+    ;; PBXFileReference -> PBXBuildFile
+    (when-let (build-file-ids (xcode-project--objects-keep project
+                                                           (lambda (bf)
+                                                             (if (equal (alist-get 'fileRef bf) file-ref-id)
+                                                                 (symbol-name (car bf))))
+                                                           "PBXBuildFile"))
+      ;; Iterate over build phases, returning the associated target if the phase contains the a matching build-file.
+      (let ((targets (xcode-project-targets project)))
+        (xcode-project--objects-keep project
+                                     (lambda (phase)
+                                       (when (seq-intersection (alist-get 'files phase) build-file-ids)
+                                         (seq-find (lambda (target)
+                                                     (seq-contains (alist-get 'buildPhases target) (symbol-name (car phase))))
+                                                   targets)))
+                                     (or phase-isa "PBX.*BuildPhase"))))))
+
+(defun xcode-project-target-names-for-file (project file-name &optional phase-isa)
+  "Return a list of target names in PROJECT which include FILE-NAME.
+FILE-NAME may be a name or a relative path, but must match the
+PBXFileReference path stored in the Xcode project.
+Optionally filter via phase type PHASE-ISA if known (e.g. PBXSourcesBuildPhase)."
+  (nreverse (seq-map (lambda (target) (alist-get 'name target))
+                     (xcode-project-targets-for-file project file-name phase-isa))))
 
 (defun xcode-project-target-name (target)
   "Return the name of the specified TARGET."
@@ -278,6 +330,27 @@ Optionally filter files via the predicate PRED (FILE)."
 
 ;; Files
 
+(defun xcode-project-file-references (project file-name &optional keep-ref)
+  "Return a list of PBXFileReference objects in PROJECT matching FILE-NAME.
+FILE-NAME may not be unique at the PBXFileReference level, so this method may
+return one or more items in the result list.
+If KEEP-REF t sets ref as the car of the returned object."
+  (let* ((file-refs (xcode-project--objects-isa project "PBXFileReference" keep-ref))
+         (match (xcode-project--objects-keep project
+                                             (lambda(obj)
+                                               (when (equal (xcode-project-file-ref-path obj) file-name)
+                                                 (if keep-ref obj (cdr obj))))
+                                             "PBXFileReference")))
+    (unless match
+      ;; More relaxed search, on file-name only (ignoring directory).
+      ;; This allows us to match the file-name regardless of the relative path.
+      (setq match (xcode-project--objects-keep project
+                                               (lambda (obj)
+                                                 (when (equal (file-name-nondirectory (xcode-project-file-ref-path obj)) file-name)
+                                                   (if keep-ref obj (cdr obj))))
+                                       "PBXFileReference")))
+    match))
+
 (defun xcode-project--file-list (project &optional pred)
   "Return complete list of files, as PBXFileReference objects, for the PROJECT.
 Includes fully qualified paths (relative to the project's root directory).
@@ -325,15 +398,19 @@ Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
   (seq-map (lambda (file) (alist-get 'path file))
            (xcode-project-build-files project target-name phase-isa pred)))
 
-(defun xcode-project-file-name-extension (file-ref)
+(defun xcode-project-file-ref-path (file-ref)
+  "Return the file name for the FILE-REF object."
+  (or (alist-get 'path file-ref) (alist-get 'name file-ref)))
+
+(defun xcode-project-file-ref-extension (file-ref)
   "Return the file name extension for the FILE-REF object."
   (when-let (path-or-name (or (alist-get 'path file-ref)
                               (alist-get 'name file-ref)))
     (file-name-extension path-or-name)))
 
-(defun xcode-project-file-name-extension-p (file-ref ext)
+(defun xcode-project-file-ref-extension-p (file-ref ext)
   "Return t if the FILE-REF's extension is equal to EXT (case-insensitive)."
-  (string-collate-equalp (xcode-project-file-name-extension file-ref) ext nil t))
+  (string-collate-equalp (xcode-project-file-ref-extension file-ref) ext nil t))
 
 (provide 'xcode-project)
 ;;; xcode-project.el ends here
