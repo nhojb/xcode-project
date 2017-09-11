@@ -107,10 +107,10 @@ Private function."
                        (xcode-project--objects project)))
 
 (defun xcode-project--objects-keep (project pred &optional isa)
-  "Return a list of non-nil results of applying PRED to all objects in PROJECT.
+  "For each object in PROJECT apply PRED and return a list of non-nil results.
 Optionally filter by object type ISA.
 
-This method can be faster than using xcode-project--objects-isa, then
+This method can be faster than using `xcode-project--objects-isa', then
 performing additional filtering on the returned list.
 
 Private function."
