@@ -161,6 +161,7 @@
 
     (should (equal (length (xcode-project-build-file-paths project "MetalTest")) 6))
     (should (equal (car (xcode-project-build-file-paths project "MetalTest")) "MetalTest/AppDelegate.swift"))
+    (should (equal (car (xcode-project-build-file-paths project "MetalTest" nil nil 'absolute)) (concat default-directory "MetalTest/AppDelegate.swift")))
     ))
 
 (ert-deftest xcode-project-test-file-references ()
@@ -171,7 +172,18 @@
     (should (equal (alist-get 'path (car (xcode-project-file-references project "Base.lproj/Main.storyboard"))) "Base.lproj/Main.storyboard"))
     ;; file-name heuristics
     (should (equal (alist-get 'path (car (xcode-project-file-references project "Main.storyboard"))) "Base.lproj/Main.storyboard"))
+    ;; absolute paths
+    (should (equal (alist-get 'path (car (xcode-project-file-references project (concat default-directory "AppDelegate.swift")))) "AppDelegate.swift"))
     (should-not (xcode-project-file-references project "Foo.swift"))
+    ))
+
+(ert-deftest xcode-project-test-serialize ()
+  "Test serialization and deserialization."
+  (let* ((project (xcode-project-read xcode-project-test-project-path))
+         (temp-file (make-temp-file "xcode-project-test")))
+    (should (xcode-project-serialize project temp-file))
+    (should (equal project (xcode-project-deserialize temp-file)))
+    (delete-file temp-file)
     ))
 
 (provide 'xcode-project-test)
