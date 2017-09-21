@@ -399,11 +399,16 @@ Optionally filter by PHASE-ISA type or predicate PRED (FILE-REF)."
                               (alist-get (car file-with-ref) whitelist)))))
       (xcode-project--file-list project combined-pred))))
 
-(defun xcode-project-build-file-paths (project target-name &optional phase-isa pred)
-  "Return file paths, relative to PROJECT, for TARGET-NAME.
-Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
-  (seq-map (lambda (file) (alist-get 'path file))
-           (xcode-project-build-files project target-name phase-isa pred)))
+(defun xcode-project-build-file-paths (project target-name &optional phase-isa pred absolute)
+  "Return file paths, relative to PROJECT's root, for TARGET-NAME.
+
+Optionally filter by PHASE-ISA type or predicate PRED (FILE-REF).
+
+If ABSOLUTE is non-nil then create absolute paths."
+  (let ((parent-path (when absolute
+                       (file-name-directory (alist-get 'xcode-project-path project)))))
+    (seq-map (lambda (file) (concat parent-path (alist-get 'path file)))
+             (xcode-project-build-files project target-name phase-isa pred))))
 
 (defun xcode-project-file-ref-path (file-ref)
   "Return the file name for the FILE-REF object."
