@@ -335,18 +335,25 @@ Optionally filter files via the predicate PRED (FILE)."
 FILE-NAME may not be unique at the PBXFileReference level, so this method may
 return one or more items in the result list.
 If KEEP-REF t sets ref as the car of the returned object."
-  (let* ((file-refs (xcode-project--objects-isa project "PBXFileReference" keep-ref))
+  (let* ((file-name-rel (string-remove-prefix
+                         (file-name-directory (alist-get 'xcode-project-path project))
+                         (expand-file-name file-name)))
+         (file-refs (xcode-project--objects-isa project "PBXFileReference" keep-ref))
          (match (xcode-project--objects-keep project
                                              (lambda(obj)
-                                               (when (equal (xcode-project-file-ref-path obj) file-name)
+                                               (when (equal (xcode-project-file-ref-path obj) file-name-rel)
                                                  (if keep-ref obj (cdr obj))))
                                              "PBXFileReference")))
     (unless match
-      ;; More relaxed search, on file-name only (ignoring directory).
+      ;; More permissive search, on file-name only (ignoring directory).
       ;; This allows us to match the file-name regardless of the relative path.
       (setq match (xcode-project--objects-keep project
                                                (lambda (obj)
-                                                 (when (equal (file-name-nondirectory (xcode-project-file-ref-path obj)) file-name)
+                                                 (when
+                                                     (or (equal (file-name-nondirectory (xcode-project-file-ref-path obj))
+                                                                file-name-rel)
+                                                         (equal (xcode-project-file-ref-path obj)
+                                                                (file-name-nondirectory file-name-rel)))
                                                    (if keep-ref obj (cdr obj))))
                                        "PBXFileReference")))
     match))
@@ -354,7 +361,7 @@ If KEEP-REF t sets ref as the car of the returned object."
 (defun xcode-project--file-list (project &optional pred)
   "Return complete list of files, as PBXFileReference objects, for the PROJECT.
 Includes fully qualified paths (relative to the project's root directory).
-Optionally filter files via predicate PRED (FILE).
+Optionally filter files via predicate PRED (FILE-REF).
 
 This method builds the file list recursively, starting at the root group.
 It's much faster to build paths this way, than to start with a leaf node (file)
@@ -371,7 +378,7 @@ and work back up the group hierarchy."
 
 (defun xcode-project-build-files (project target-name &optional phase-isa pred)
   "Return the files, as PBXFileReference objects, in PROJECT for TARGET-NAME.
-Optionally filter by PHASE-ISA type or predicate PRED (FILE)."
+Optionally filter by PHASE-ISA type or predicate PRED (FILE-REF)."
   ;; Get a "whitelist" of file references for the target's build phases
   (let ((whitelist
          (seq-mapcat (lambda (phase)
