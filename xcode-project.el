@@ -424,5 +424,18 @@ If ABSOLUTE is non-nil then create absolute paths."
   "Return t if the FILE-REF's extension is equal to EXT (case-insensitive)."
   (string-collate-equalp (xcode-project-file-ref-extension file-ref) ext nil t))
 
+(defun xcode-project-serialize (project path)
+  "Write the PROJECT to file at PATH."
+  (with-temp-file path
+    (prin1 project (current-buffer))))
+
+(defun xcode-project-deserialize (path)
+  "Return the de-serialized project found at PATH."
+  (when (file-exists-p path)
+         (with-temp-buffer
+           (insert-file-contents path)
+           (goto-char (point-min))
+           (read (current-buffer)))))
+
 (provide 'xcode-project)
 ;;; xcode-project.el ends here
