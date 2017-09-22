@@ -164,6 +164,10 @@ Returns the path to the Xcode project, or nil if not found."
           (setq directory (file-name-directory (directory-file-name directory))))
         (car xcodeproj))))
 
+(defun xcode-project-path (project)
+  "Return the path of the parsed PROJECT."
+  (alist-get 'xcode-project-path project))
+
 ;; Targets
 
 (defun xcode-project-targets (project &optional key value)

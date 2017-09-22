@@ -64,6 +64,14 @@
     (should-not (xcode-project-read (concat xcode-project-test-directory "simple.plist")))
     ))
 
+(ert-deftest xcode-project-test-project-path ()
+  "Test extracting the project's path."
+  (let* ((project-path xcode-project-test-project-path)
+         (project (xcode-project-read project-path)))
+    (should project)
+    (should-not (xcode-project--objects-isa project "PBXFooBar"))
+    ))
+
 (ert-deftest xcode-project-test-objects-isa ()
   "Test extracting objects by type."
   (let* ((project (xcode-project-read xcode-project-test-project-path)))
