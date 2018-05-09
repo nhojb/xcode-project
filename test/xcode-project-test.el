@@ -186,6 +186,21 @@
     (should-not (xcode-project-file-references project "Foo.swift"))
     ))
 
+(ert-deftest xcode-project-test-build-settings ()
+  "Test extracting and resolving build-settings."
+  (let* ((project (xcode-project-read xcode-project-test-project-path))
+         (build-settings (alist-get 'buildSettings (xcode-project-build-config project "Debug" "MetalTest"))))
+    (should build-settings)
+    (should (equal (alist-get 'MACOSX_DEPLOYMENT_TARGET build-settings) 10.12))
+    (should (equal (alist-get 'GCC_C_LANGUAGE_STANDARD build-settings) "gnu99"))
+    (should (equal (alist-get 'GCC_NO_COMMON_BLOCKS build-settings) "YES"))
+    ;; check inherited settings
+    (should (equal (alist-get 'GCC_PREPROCESSOR_DEFINITIONS build-settings) (vector "DEBUG=1")))
+    ;; and placeholder ($PROJECT_DIR) resolution
+    (should (seq-contains (alist-get 'HEADER_SEARCH_PATHS build-settings) (xcode-project-concat-path xcode-project-test-directory "target/include")))
+    (should (seq-contains (alist-get 'HEADER_SEARCH_PATHS build-settings) (xcode-project-concat-path xcode-project-test-directory "include")))
+  ))
+
 (ert-deftest xcode-project-test-serialize ()
   "Test serialization and deserialization."
   (let* ((project (xcode-project-read xcode-project-test-project-path))
