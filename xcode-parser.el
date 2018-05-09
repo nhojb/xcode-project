@@ -128,8 +128,14 @@ representation will be parsed correctly."
  ;; It is important that this regex only permit a single decimal point
  ;; in the result. This is because input with > 1 decimal point must be
  ;; treated as an unquoted string.
- (if (and (looking-at "[-+]?[0-9]*[.0-9]\\{1\\}[0-9]*\\([Ee][+-]?[0-9]+\\)?\\b")
-          ;; a second decimal point is not permitted - should be an unquoted string.
+ ;;
+ ;; Additionaly we limit number length to 23 significant digits before the decimal place.
+ ;; This is to avoid parsing 24 character fileRef hex objects as numbers
+ ;; (they are occasionally composed of numberic chars only).
+ (if (and (looking-at "[-+]?[0-9]\\{0,23\\}\\(\\.[0-9]*\\)?\\([Ee][+-]?[0-9]+\\)?\\b")
+          (> (match-end 0) (match-beginning 0))
+          ;; a second decimal point is not permitted - value should be read as unquoted string.
+          ;; e.g. "8.3.3"
           (not (eq (char-after (match-end 0)) ?.)))
      (progn
        (goto-char (match-end 0))

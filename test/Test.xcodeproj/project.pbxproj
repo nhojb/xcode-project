@@ -13,6 +13,7 @@
 		52EB57921F3E0E74008E3850 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 52EB57911F3E0E74008E3850 /* Assets.xcassets */; };
 		52EB57951F3E0E74008E3850 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 52EB57931F3E0E74008E3850 /* Main.storyboard */; };
 		52EB57A21F3E0EC3008E3850 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52EB57A11F3E0EC3008E3850 /* MetalView.swift */; };
+        523682682064504100762896 /* PickerAdjustmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523682672064504100762897 /* PickerAdjustmentView.swift */; }; 
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		52EB579D1F3E0E87008E3850 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		52EB579F1F3E0E91008E3850 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		52EB57A11F3E0EC3008E3850 /* MetalView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
+		523682682064504100762897 /* PickerAdjustmentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PickerAdjustmentView.swift; sourceTree = "<group>"; };    
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +67,7 @@
 				52EB57931F3E0E74008E3850 /* Main.storyboard */,
 				52EB57961F3E0E74008E3850 /* Info.plist */,
 				52EB57A11F3E0EC3008E3850 /* MetalView.swift */,
+ 				523682682064504100762897 /* PickerAdjustmentView.swift */,
 				52E68B601F45B66B0055BE24 /* Shaders.metal */,
 			);
 			path = MetalTest;
@@ -153,6 +156,7 @@
 			files = (
 				52E68B611F45B66B0055BE24 /* Shaders.metal in Sources */,
 				52EB57A21F3E0EC3008E3850 /* MetalView.swift in Sources */,
+				523682682064504100762896 /* PickerAdjustmentView.swift */,
 				52EB57901F3E0E74008E3850 /* ViewController.swift in Sources */,
 				52EB578E1F3E0E74008E3850 /* AppDelegate.swift in Sources */,
 			);

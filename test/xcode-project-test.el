@@ -177,6 +177,7 @@
   (let* ((project (xcode-project-read xcode-project-test-project-path)))
     (should (xcode-project-file-references project "AppDelegate.swift"))
     (should (equal (alist-get 'path (car (xcode-project-file-references project "AppDelegate.swift"))) "AppDelegate.swift"))
+    (should (equal (alist-get 'path (car (xcode-project-file-references project "PickerAdjustmentView.swift"))) "PickerAdjustmentView.swift"))
     (should (equal (alist-get 'path (car (xcode-project-file-references project "Base.lproj/Main.storyboard"))) "Base.lproj/Main.storyboard"))
     ;; file-name heuristics
     (should (equal (alist-get 'path (car (xcode-project-file-references project "Main.storyboard"))) "Base.lproj/Main.storyboard"))

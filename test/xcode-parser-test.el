@@ -127,6 +127,10 @@ Optionaly perform body NTIMES."
     (xcode-parser-test-should-equal "2.3;" 2.3 fun)
     (xcode-parser-test-should-equal "-3.73e9)" -3.73e9 fun)
     (xcode-parser-test-should-equal "4002.76}" 4002.76 fun)
+    ;; fileRefs e.g. 523682672064504100762896 should always be interpreted as strings
+    (xcode-parser-test-should-equal "523682672064504100762896" "523682672064504100762896" fun)
+    ;; But a number with 23 sig digits should still be a number
+    (xcode-parser-test-should-equal "52368267206450410076289" 52368267206450410076289 fun)
     ))
 
 ;; Arrays
