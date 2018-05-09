@@ -142,9 +142,8 @@ Private function."
 Returns the parsed Xcode project as a json object, or nil on error."
   (let ((pbxproj-path (if (equal (file-name-nondirectory xcodeproj-path) "project.pbxproj")
                           xcodeproj-path
-                        (concat (file-name-as-directory xcodeproj-path) "project.pbxproj")))
-        (plutil-path (executable-find "plutil")))
-    (if (and (file-exists-p pbxproj-path) plutil-path)
+                        (xcode-project-concat-path xcodeproj-path "project.pbxproj"))))
+    (when (file-exists-p pbxproj-path)
         (when-let ((proj (xcode-parser-read-file (expand-file-name pbxproj-path))))
           ;; append path - used when building file-paths
           (setcdr (last proj) `((xcode-project-path . ,xcodeproj-path)))
@@ -254,6 +253,21 @@ Private function."
                                  config)))
                          (alist-get 'buildConfigurations config-list))))
 
+(defun xcode-project--replace-build-variable (value project-dir)
+  "Replace certain placeholder variables in VALUE.
+PROJECT-DIR should be the project's root directory."
+  ;; TODO: Improve scope of replacements.
+  (setq project-dir (string-remove-suffix "/" project-dir))
+  (let ((replacements `(("SRCROOT" . ,project-dir)
+                        ("SOURCE_ROOT" . ,project-dir)
+                        ("PROJECT_DIR" . ,project-dir)
+                        ("SYSTEM_APPS_DIR" . "/Applications"))))
+    (dolist (key-value replacements value)
+      (setq value (replace-regexp-in-string (format "$(%s)" (car key-value))
+                                            (cdr key-value)
+                                            value
+                                            'fixedcase)))))
+
 (defun xcode-project-build-config (project name target-name)
   "Return the build configuration in PROJECT matching NAME for TARGET-NAME."
   (let* ((target (car (xcode-project-targets project 'name target-name)))
@@ -263,13 +277,52 @@ Private function."
                                     (if (equal (alist-get 'name config) name)
                                         ;; copy to avoid mutating the original
                                         (copy-alist config))))
-                    (alist-get 'buildConfigurations build-config-list)))
-         (root-settings (alist-get 'buildSettings (car (xcode-project--root-build-configs project name)))))
+                    (alist-get 'buildConfigurations build-config-list))))
     (when target-build-config
-        ;; merge root build settings
-        (setf (alist-get 'buildSettings target-build-config)
-              (append (alist-get 'buildSettings target-build-config) root-settings))
-        target-build-config)))
+      (let* ((root-settings (alist-get 'buildSettings (car (xcode-project--root-build-configs project name))))
+             (target-settings (alist-get 'buildSettings target-build-config)))
+        (setq root-settings (xcode-project--resolve-build-config project root-settings nil))
+        (setq target-settings (xcode-project--resolve-build-config project target-settings root-settings))
+        ;; merge root-only settings
+        (setf (alist-get 'buildSettings target-build-config) (seq-concatenate 'list target-settings root-settings)))
+      target-build-config)))
+
+(defun xcode-project--resolve-build-config (project settings parent-settings)
+  "Resolves $(inherited) values in PROJECT SETTINGS using values in PARENT-SETTINGS.
+Also replaces PROJECT_DIR placeholders in some path related build variables
+e.g. HEADER_SEARCH_PATHS etc."
+  ;; process setting variables - $(inherited) and build variables.
+  (let ((project-dir (file-name-directory (xcode-project-path project))))
+    (dolist (key-value settings)
+      (let* ((key (car key-value))
+             (value (cdr key-value))
+             (parent-value (alist-get key parent-settings)))
+        (cond ((stringp value)
+               (when (string-match-p "$(inherited)" value)
+                 (when (not parent-value)
+                   (setq parent-value ""))
+                 (setq value (replace-regexp-in-string "$(inherited)"
+                                                       parent-value
+                                                       value)))
+               (when (string-suffix-p "_PATHS" (symbol-name key))
+                 (setq value
+                       (xcode-project--replace-build-variable value project-dir))))
+              ((vectorp value)
+               (when (seq-contains value "$(inherited)")
+                 (setq value (seq-concatenate 'vector
+                                              (seq-remove (lambda (item)
+                                                            (equal item "$(inherited)"))
+                                                          value)
+                                              (if (or (vectorp parent-value) (not parent-value))
+                                                  parent-value
+                                                (vector parent-value)))))
+               (when (string-suffix-p "_PATHS" (symbol-name key))
+                 (setq value (seq-map (lambda (item)
+                                        (xcode-project--replace-build-variable item project-dir))
+                                      value)))))
+        (when (not (equal value (cdr key-value)))
+          (setf (alist-get key settings) value)))))
+  settings)
 
 (defun xcode-project-build-config-names (project)
   "Return a list of build configurations found in PROJECT.
@@ -440,6 +493,13 @@ If ABSOLUTE is non-nil then create absolute paths."
            (insert-file-contents path)
            (goto-char (point-min))
            (read (current-buffer)))))
+
+(defun xcode-project-concat-path (parent-dir &rest path-components)
+  "Concatenate PARENT-DIR, PATH-COMPONENTS.
+Ensures PARENT-DIR has a trailing path separator."
+  (when (stringp parent-dir)
+    (apply 'concat (file-name-as-directory parent-dir)
+           (nconc (mapcar 'file-name-as-directory (butlast path-components)) (last path-components)))))
 
 (provide 'xcode-project)
 ;;; xcode-project.el ends here
