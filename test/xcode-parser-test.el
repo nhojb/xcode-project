@@ -122,6 +122,8 @@ Optionaly perform body NTIMES."
     (xcode-parser-test-should-equal "5ABCED" "5ABCED" fun)
     ;; more than one period is not a valid number
     (xcode-parser-test-should-equal "8.3.3" "8.3.3" fun)
+    ;; leading period is not a number when followed by non-digit
+    (xcode-parser-test-should-equal ".git" ".git" fun)
     ;; with terminating chars
     (xcode-parser-test-should-equal "1," 1 fun)
     (xcode-parser-test-should-equal "2.3;" 2.3 fun)

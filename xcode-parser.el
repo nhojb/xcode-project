@@ -134,6 +134,7 @@ representation will be parsed correctly."
  ;; (they are occasionally composed of numberic chars only).
  (if (and (looking-at "[-+]?[0-9]\\{0,23\\}\\(\\.[0-9]*\\)?\\([Ee][+-]?[0-9]+\\)?\\b")
           (> (match-end 0) (match-beginning 0))
+          (not (equal (match-string 0) "."))
           ;; a second decimal point is not permitted - value should be read as unquoted string.
           ;; e.g. "8.3.3"
           (not (eq (char-after (match-end 0)) ?.)))
@@ -251,13 +252,13 @@ Returns the updated object, which you should save, e.g.:
         (xcode-parser-skip-whitespace-or-comment)
         (if (eq (char-after) ?=)
             (xcode-parser-advance)
-          (signal 'xcode-parser-dict-format (list "=" (xcode-parser-peek))))
+          (signal 'xcode-parser-dict-format (list "=" (char-to-string (xcode-parser-peek)))))
         (setq value (xcode-parser-read))
         (setq elements (xcode-parser-add-to-dict key value elements))
         (xcode-parser-skip-whitespace-or-comment)
         (if (eq (char-after) ?\;)
             (xcode-parser-advance)
-          (signal 'xcode-parser-dict-format (list ";" (xcode-parser-peek))))
+          (signal 'xcode-parser-dict-format (list ";" (char-to-string (xcode-parser-peek)))))
         (xcode-parser-skip-whitespace-or-comment)
         (if (eq (char-after) ?})
             (setq more nil))))
