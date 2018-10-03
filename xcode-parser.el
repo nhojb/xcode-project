@@ -134,7 +134,7 @@ representation will be parsed correctly."
  ;; (they are occasionally composed of numberic chars only).
  (if (and (looking-at "[-+]?[0-9]\\{0,23\\}\\(\\.[0-9]*\\)?\\([Ee][+-]?[0-9]+\\)?\\b")
           (> (match-end 0) (match-beginning 0))
-          (not (equal (match-string 0) "."))
+          (not (looking-at "\\.[^0-9]"))
           ;; a second decimal point is not permitted - value should be read as unquoted string.
           ;; e.g. "8.3.3"
           (not (eq (char-after (match-end 0)) ?.)))
