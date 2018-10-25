@@ -69,6 +69,8 @@
 
 ;;; Code:
 
+(require 'subr-x)
+(require 'seq)
 (require 'xcode-parser)
 
 ;; Utilities
