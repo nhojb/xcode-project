@@ -169,7 +169,7 @@
 
     (should (equal (length (xcode-project-build-file-paths project "MetalTest")) 6))
     (should (equal (car (xcode-project-build-file-paths project "MetalTest")) "MetalTest/AppDelegate.swift"))
-    (should (equal (car (xcode-project-build-file-paths project "MetalTest" nil nil 'absolute)) (concat default-directory "MetalTest/AppDelegate.swift")))
+    (should (equal (car (xcode-project-build-file-paths project "MetalTest" nil nil 'absolute)) (concat xcode-project-test-directory "MetalTest/AppDelegate.swift")))
     ))
 
 (ert-deftest xcode-project-test-file-references ()
@@ -182,7 +182,7 @@
     ;; file-name heuristics
     (should (equal (alist-get 'path (car (xcode-project-file-references project "Main.storyboard"))) "Base.lproj/Main.storyboard"))
     ;; absolute paths
-    (should (equal (alist-get 'path (car (xcode-project-file-references project (concat default-directory "AppDelegate.swift")))) "AppDelegate.swift"))
+    (should (equal (alist-get 'path (car (xcode-project-file-references project (concat xcode-project-test-directory "AppDelegate.swift")))) "AppDelegate.swift"))
     (should-not (xcode-project-file-references project "Foo.swift"))
     ))
 

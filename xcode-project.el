@@ -394,9 +394,11 @@ Optionally filter files via the predicate PRED (FILE)."
 FILE-NAME may not be unique at the PBXFileReference level, so this method may
 return one or more items in the result list.
 If KEEP-REF t sets ref as the car of the returned object."
-  (let* ((file-name-rel (string-remove-prefix
-                         (file-name-directory (alist-get 'xcode-project-path project))
-                         (expand-file-name file-name)))
+  (let* ((project-dir (file-name-directory (alist-get 'xcode-project-path project)))
+         ;; file-name relative to project directory, else just the file-name as is.
+         (file-name-rel (if (string-prefix-p project-dir (expand-file-name file-name))
+                            (string-remove-prefix project-dir (expand-file-name file-name))
+                          file-name))
          (file-refs (xcode-project--objects-isa project "PBXFileReference" keep-ref))
          (match (xcode-project--objects-keep project
                                              (lambda(obj)

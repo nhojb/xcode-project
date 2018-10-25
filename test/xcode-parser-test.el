@@ -61,13 +61,13 @@ Optionaly perform body NTIMES."
          (n (or ,ntimes 1)))
      (dotimes (i n)
        ,@body)
-     (message "%.06f" (/ (float-time (time-since time)) n))))
+     (message "elapsed: %.06f" (/ (float-time (time-since time)) n))))
 
 (defmacro xcode-parser-measure-time (&rest body)
   "Measure the time it takes to evaluate BODY."
   `(let ((time (current-time)))
      ,@body
-     (message "%.06f" (float-time (time-since time)))))
+     (message "elapsed: %.06f" (float-time (time-since time)))))
 
 ;; Strings
 
