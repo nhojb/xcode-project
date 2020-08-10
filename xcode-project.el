@@ -222,8 +222,8 @@ which are referenced (in the build phase) via their parent PBXVariantGroup."
 FILE-NAME may be a name or a relative path, but must match the
 PBXFileReference path stored in the Xcode project.
 Optionally filter via phase type PHASE-ISA if known (e.g. PBXSourcesBuildPhase)."
-  (nreverse (seq-map (lambda (target) (alist-get 'name target))
-                     (xcode-project-targets-for-file project file-name phase-isa))))
+  (seq-map (lambda (target) (alist-get 'name target))
+           (xcode-project-targets-for-file project file-name phase-isa)))
 
 (defun xcode-project-target-name (target)
   "Return the name of the specified TARGET."
