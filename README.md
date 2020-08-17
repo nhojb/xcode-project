@@ -1,6 +1,8 @@
-# xcode-project
+[![MELPA](https://melpa.org/packages/xcode-project-badge.svg)](https://melpa.org/#/xcode-project)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+# xcode-project
 
 A package for Emacs which parses Xcode project files.
 
